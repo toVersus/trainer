@@ -14,6 +14,10 @@ import (
 	"github.com/kubeflow/trainer/test/util"
 )
 
+const (
+	torchRuntime = "torch-distributed"
+)
+
 var _ = ginkgo.Describe("TrainJob e2e", func() {
 	// Each test runs in a separate namespace.
 	var ns *corev1.Namespace
@@ -45,7 +49,7 @@ var _ = ginkgo.Describe("TrainJob e2e", func() {
 		ginkgo.It("should create TrainJob with PyTorch runtime reference", func() {
 			// Create a TrainJob.
 			trainJob := testingutil.MakeTrainJobWrapper(ns.Name, "e2e-test").
-				RuntimeRef(trainer.SchemeGroupVersion.WithKind(trainer.ClusterTrainingRuntimeKind), "torch-distributed").
+				RuntimeRef(trainer.SchemeGroupVersion.WithKind(trainer.ClusterTrainingRuntimeKind), torchRuntime).
 				Obj()
 
 			ginkgo.By("Create a TrainJob with torch-distributed runtime reference", func() {
