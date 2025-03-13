@@ -324,7 +324,7 @@ var _ = ginkgo.Describe("TrainJob controller", ginkgo.Ordered, func() {
 									},
 									{
 										Name:  constants.TorchEnvNumProcPerNode,
-										Value: "auto",
+										Value: "1",
 									},
 									{
 										Name: constants.TorchEnvNodeRank,

@@ -422,7 +422,7 @@ func TestTrainingRuntimeNewObjects(t *testing.T) {
 							},
 							{
 								Name:  constants.TorchEnvNumProcPerNode,
-								Value: "auto",
+								Value: "1",
 							},
 							{
 								Name: constants.TorchEnvNodeRank,
