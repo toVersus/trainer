@@ -76,19 +76,23 @@ By adopting `torchtune` as the low-level runtime for LLM fine-tuning, we can eas
 To hide users from complex Kubernetes configuations, we will provide a simple yet flexible Python SDK wrapping all specifications of models, datasets, training runtime and fine-tuning configs. Like this:
 
 ```python
-job_id = TrainingClient().train(
-    dataset_config=HuggingFaceDatasetConfig(
-        storage_uri="tatsu-lab/alpaca",
-    ),
-    fine_tuning_config=TorchTuneConfig(
-        dtype="bf16",
-        batch_size=1,
-        epochs=1,
-        peft_config=LoraConfig(
-            lora_rank=64,
-            lora_alpha=128,
+job_id = TrainerClient().train(
+    trainer=BuiltinTrainer(
+        config=TorchTuneConfig(
+            dtype="bf16",
+            batch_size=1,
+            epochs=1,
+            peft_config=LoraConfig(
+                lora_rank=64,
+                lora_alpha=128,
+            ),
+            num_nodes=5,
         ),
-        num_nodes=5,
+    ),
+    initializer=Initializer(
+        dataset=HuggingFaceDatasetInitializer(
+            storage_uri="tatsu-lab/alpaca",
+        )
     ),
     runtime_ref="torchtune-llama3.1-8B-finetuning",
 )
@@ -189,39 +193,41 @@ TrainerClient().train(
 )
 ```
 
-#### Modify the `train` API
+#### Modify the `train()` API
 
-As we discussed in [Github](https://github.com/kubeflow/trainer/pull/2410#discussion_r1963832826), the `train` API mainly executes two types of training tasks:
+As we discussed in [Github](https://github.com/kubeflow/trainer/pull/2410#discussion_r1963832826), the `train()` API mainly executes two types of training tasks:
 
-1. **Type 1: Training with custom function/image**: A self-contained function/image that encapsulates the entire model training process.
-2. **Type 2: Config-driven approach with existing Trainer**: A trainer that already includes fine-tuning logic, requiring only parameter adjustments.
+1. **Type 1: Training with custom function/image**: A self-contained function/image that encapsulates the entire model training process (e.g. `CustomTrainer`).
+2. **Type 2: Config-driven approach with existing Trainer**: A trainer that already includes fine-tuning logic, requiring only parameter adjustments (e.g. `BuiltinTrainer`).
 
-So we plan to modify the `train` API to:
+So we plan to modify the `train()` API to:
 
 ```python
 def train(
-    trainer: Optional[CustomTrainer] = None,
-    fine_tuning_config: Optional[Union[TorchTuneConfig]] = None,
-    dataset_config: Optional[types.HuggingFaceDatasetConfig] = None,
-    model_config: Optional[types.HuggingFaceModelInputConfig] = None,
-    runtime_ref: Optional[str] = None,
+    runtime_ref: str,
+    trainer: Optional[Union[CustomTrainer, BuiltinTrainer]] = None,
+    initializer: Optional[Initializer] = None,
 ) -> str:
     pass
 
 @dataclass
 class CustomTrainer:
-    func: Optional[Callable] = None
+    func: Callable
     func_args: Optional[Dict] = None
     packages_to_install: Optional[List[str]] = None
-    pip_index_url: str = constants.DEFAULT_PIP_INDEX_URL
+    pip_index_url: Optional[str] = constants.DEFAULT_PIP_INDEX_URL
     num_nodes: Optional[int] = None
     resources_per_node: Optional[Dict] = None
 
+@dataclass
+class BuiltinTrainer:
+    config: TorchTuneConfig
+
 ```
 
-`trainer` defines the parameters for Type 1 tasks, and will add support for custom function in the initial stage.
+`CustomTrainer` defines the parameters for Type 1 tasks, and will add support for custom function in the initial stage.
 
-`fine_tuning_config` defines the parameters for LLM fine-tuning task in Type 2, and will add support for fine-tuning with `torchtune` in the early stage.
+`BuiltinTrainer` defines the parameters for Type 2 tasks, and will add support for post-training with `torchtune` in the early stage.
 
 We natively support all `recipe` and `config` supported by `torchtune`, since `torchtune` has already provided us with default `config`. We just cannot mutate them if we do not support the corresponding mutation config.
 
