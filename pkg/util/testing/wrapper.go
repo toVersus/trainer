@@ -205,13 +205,13 @@ func (j *JobSetWrapper) LauncherReplica() *JobSetWrapper {
 			j.Spec.ReplicatedJobs = append(j.Spec.ReplicatedJobs, jobsetv1alpha2.ReplicatedJob{})
 			copy(j.Spec.ReplicatedJobs[i+1:], j.Spec.ReplicatedJobs[i:])
 			j.Spec.ReplicatedJobs[i] = jobsetv1alpha2.ReplicatedJob{
-				Name: constants.JobLauncher,
+				Name: constants.Launcher,
 				Template: batchv1.JobTemplateSpec{
 					Spec: batchv1.JobSpec{
 						Template: corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{{
-									Name:    constants.ContainerLauncher,
+									Name:    constants.Node,
 									Command: []string{"mpirun"},
 									Args:    []string{"echo.sh"},
 								}},
@@ -885,13 +885,13 @@ func (s *TrainingRuntimeSpecWrapper) LauncherReplica() *TrainingRuntimeSpecWrapp
 			s.Template.Spec.ReplicatedJobs = append(s.Template.Spec.ReplicatedJobs, jobsetv1alpha2.ReplicatedJob{})
 			copy(s.Template.Spec.ReplicatedJobs[i+1:], s.Template.Spec.ReplicatedJobs[i:])
 			s.Template.Spec.ReplicatedJobs[i] = jobsetv1alpha2.ReplicatedJob{
-				Name: constants.JobLauncher,
+				Name: constants.Launcher,
 				Template: batchv1.JobTemplateSpec{
 					Spec: batchv1.JobSpec{
 						Template: corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{{
-									Name:    constants.ContainerLauncher,
+									Name:    constants.Node,
 									Command: []string{"mpirun"},
 									Args:    []string{"echo.sh"},
 								}},
