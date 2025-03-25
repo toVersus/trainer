@@ -94,7 +94,9 @@ job_id = TrainerClient().train(
             storage_uri="tatsu-lab/alpaca",
         )
     ),
-    runtime_ref="torchtune-llama3.1-8B-finetuning",
+    runtime=Runtime(
+      name="torchtune-llama3.1-8B-finetuning",
+    ),
 )
 ```
 
@@ -188,7 +190,7 @@ To provide a better user experience, we need to offer a simple SDK that allows u
 ```python
 # By default we can fine-tune models without any additional configurations from users
 TrainerClient().train(
-    runtime_ref="torchtune-llama-3.3-70b"
+    runtime=Runtime(name="torchtune-llama-3.3-70b"),
 )
 ```
 
@@ -203,7 +205,8 @@ So we plan to modify the `train()` API to:
 
 ```python
 def train(
-    runtime_ref: str,
+    self,
+    runtime: types.Runtime = types.DEFAULT_RUNTIME,
     trainer: Optional[Union[CustomTrainer, BuiltinTrainer]] = None,
     initializer: Optional[Initializer] = None,
 ) -> str:
@@ -260,6 +263,75 @@ class TorchTuneConfig:
 
 ```
 
+#### `list_runtimes()` API
+
+We should allow users to easily get the available TrainingRuntimes/ClusterTrainingRuntimes with the SDK, followed with information related to the trainer type, framework, model, and device. When users execute:
+
+```python
+TrainingClient().list_runtimes()
+```
+
+They are expected to get:
+
+```
+Runtime                             Trainer Type          Framework   Pretrained Model    Accelerator       Count
+
+pytorch-distributed                 custom-trainer        pytorch     <undefined>         nvidia.com/GPU    2
+torchtune-llama3.1-8B-finetuning    builtin-trainer       torchtune   Llama3.1-8B         nvidia.com/GPU    4
+```
+
+In that case, we plan to design `Runtime` dataclass as the following:
+
+| Fields | Type | What is it? |
+| - | - | - |
+| name | str | The name of TrainingRuntime/ClusterTrainingRuntime. |
+| trainer_type | str | The training method of this runtime, chosen from `custom-trainer`, `builtin-trainer`. |
+| pretrained_model | Optional[str] | The pretrained model specified for this runtime, e.g. `llama3.1-8B`. |
+
+
+```python
+# Runtime DataClass
+@dataclass
+class Runtime:
+    name: str
+    trainer: Trainer
+    pretrained_model: Optional[str] = None
+
+```
+
+`Trainer` dataclass:
+
+| Fields | Type | What is it? |
+| trainer_type | TrainerType | Selected from CustomTrainer and BuiltinTrainer. |
+| framework | Framework | The ML framework used for training, e.g. `torch`, `torchtune`. |
+| entrypoint | Optional[List[str]] | Entrypoint for the trainer node. |
+| accelerator | str | The type of devices, e.g. `nvidia.com/gpu`. |
+| accelerator_count | Union[str, float, int] | The number of devices. |
+
+```python
+class TrainerType(Enum):
+    CUSTOM_TRAINER = CustomTrainer.__name__
+    BUILTIN_TRAINER = BuiltinTrainer.__name__
+
+
+class Framework(Enum):
+    TORCH = "torch"
+    DEEPSPEED = "deepspeed"
+    MLX = "mlx"
+    TORCHTUNE = "torchtune"
+
+
+# Representation for the Trainer of the runtime.
+@dataclass
+class Trainer:
+    trainer_type: TrainerType
+    framework: Framework
+    entrypoint: Optional[List[str]] = None
+    accelerator: str = constants.UNKNOWN
+    accelerator_count: Union[str, float, int] = constants.UNKNOWN
+
+```
+
 ### Complement `torch` Plugin
 
 #### Perform Mutation in `torch` Plugin
@@ -276,7 +348,7 @@ Related changes:
 
 #### Create Map from `TorchTuneConfig` to Specific Recipes and Configs
 
-We will create a map from (`TorchTuneConfig`, `num_nodes`, `nproc_per_node`, `runtime_ref`) to dedicated `recipe` and `config` in the server side. This will allow users to fine-tune their LLMs without knowing about `torchtune`'s recipes and configs and prevent SDK from changing frequently.
+We will create a map from (`TorchTuneConfig`, `num_nodes`, `nproc_per_node`, `runtime`) to dedicated `recipe` and `config` in the server side. This will allow users to fine-tune their LLMs without knowing about `torchtune`'s recipes and configs and prevent SDK from changing frequently.
 
 - How to Select `recipe`
 
@@ -287,13 +359,13 @@ We will create a map from (`TorchTuneConfig`, `num_nodes`, `nproc_per_node`, `ru
 
 - How to Select `config`
 
-We will create one `ClusterTrainingRuntime` for one model. In this way, we can extract the model info in `runtime_ref`, and select corresponding config file according to the `recipe`.
+We will create one `ClusterTrainingRuntime` for one model. In this way, we can extract the model info in `runtime`, and select corresponding config file according to the `recipe`.
 
 #### Validate Fine-Tuning Configurations
 
 In order to ensure the validity of the configurations propagated by SDK, we plan to add some validating requirements to the TrainJob Webhook. We'll implement validations in torch plugin [`CustomValidationPlugin`](https://github.com/kubeflow/trainer/blob/1f443729ebdb3e792d4b9cd2b242f33b0e86fe14/pkg/runtime/framework/interface.go#L34-L37):
 
-1. The ClusterTrainingRuntime referenced by `runtime_ref` exists in the control plane.
+1. The ClusterTrainingRuntime referenced by `runtime` exists in the control plane.
 
 #### Determine Default Resources
 
@@ -492,7 +564,8 @@ We will use [papermill](https://github.com/nteract/papermill) to execute these n
 ## Implementation History
 
 - 2025-01-31: Create KEP-2401 doc
-- 2025-03-07: KEP-2401 1st version & Start implementation
+- 2025-03-11: KEP-2401 1st version & Start implementation
+- 2025-03-24: Add new `Runtime` dataclass design
 
 ## Alternatives
 
