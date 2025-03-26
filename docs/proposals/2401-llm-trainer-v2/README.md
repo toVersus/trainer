@@ -237,23 +237,34 @@ We natively support all `recipe` and `config` supported by `torchtune`, since `t
 
 | Parameters | Type | What is it? |
 | - | - | - |
-| dtype | Optional[str] | The underlying data type used to represent the model and optimizer parameters. Currently, we only support `bf16` and `fp32`. |
+| dtype | Optional[DataType] | The underlying data type used to represent the model and optimizer parameters. Currently, we only support `bf16` and `fp32`. |
 | batch_size | Optional[int] | The number of samples processed before updating model weights. |
 | epochs | Optional[int] | The number of samples processed before updating model weights. |
-| loss | Optional[str] | The loss algorithm we use to fine-tune the LLM, e.g. `torchtune.modules.loss.CEWithChunkedOutputLoss` |
+| loss | Optional[Loss] | The loss algorithm we use to fine-tune the LLM, e.g. `torchtune.modules.loss.CEWithChunkedOutputLoss` |
 | peft_config | Optional[Union[LoraConfig]] | Configuration for the PEFT(Parameter-Efficient Fine-Tuning), including LoRA/QLoRA/DoRA, etc. |
 | dataset_preprocess_config | Optional[Union[InstructDataset, ChatDataset, MultimodalDataset]] | Configuration for dataset preprocessing. |
 | num_nodes | Optional[int] | The number of PyTorch Nodes in training |
 | resource_per_node | Optional[Dict] | The resource for each PyTorch Node |
 
 ```python
+# Loss function for the TorchTune LLM Trainer.
+class Loss(Enum):
+    CEWithChunkedOutputLoss = "torchtune.modules.loss.CEWithChunkedOutputLoss"
+
+
+# Data type for the TorchTune LLM Trainer.
+class DataType(Enum):
+    BF16 = "bf16"
+    FP32 = "fp32"
+
+
 # TorchTuneConfig DataClass
 @dataclass
 class TorchTuneConfig:
-    dtype: Optional[str] = None
+    dtype: Optional[DataType] = None
     batch_size: Optional[int] = None
     epochs: Optional[int] = None
-    loss: Optional[str] = None
+    loss: Optional[Loss] = None
     peft_config: Optional[Union[LoraConfig]] = None
     dataset_preprocess_config: Optional[
         Union[InstructDataset, ChatDataset, MultimodalDataset],
