@@ -18,19 +18,11 @@ Note for Lima the link is to the Adopters, which supports several different cont
 
 ## Development
 
-### Development Workflow
-
 The Kubeflow Trainer project includes a Makefile with several helpful commands to streamline your development workflow:
 
 ```sh
 # Generate manifests, APIs and SDK
 make generate
-
-# Download required tools for development
-make ginkgo envtest controller-gen kind
-
-# Format and verify code
-make fmt vet golangci-lint
 ```
 
 You can see all available commands by running:
@@ -95,8 +87,8 @@ make test-e2e-notebook
 ### Go Development
 When coding:
 
-Follow [effective go](https://go.dev/doc/effective_go) guidelines.
-Run locally [make check](https://github.com/kubeflow/katib/blob/46173463027e4fd2e604e25d7075b2b31a702049/Makefile#L31) to verify if changes follow best practices before submitting PRs.
+Follow the [effective go](https://go.dev/doc/effective_go) guidelines.
+Run [`make generate`](https://github.com/kubeflow/trainer/blob/4e6199c9486d861655a712d7017b8f23f9f2e48e/Makefile#L87) locally to verify if changes follow best practices before submitting PRs.
 
 When writing tests:
 
@@ -119,8 +111,6 @@ Specific programmatically generated files listed in the `exclude` field in [.pre
 
 
 ## Legacy Setup Instructions
-
-> TODO: The following setup instructions need to be updated for Kubeflow Trainer V2.
 
 #### Manual Setup
 
