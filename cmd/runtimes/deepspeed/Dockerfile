@@ -15,19 +15,26 @@ RUN apt-get update && apt install -y --no-install-recommends \
 RUN setcap CAP_NET_BIND_SERVICE=+eip /usr/sbin/sshd
 RUN apt remove libcap2-bin -y
 
-ARG PORT=2222
-
 # Configure mpiuser and home directory.
 RUN useradd -m mpiuser
 WORKDIR /home/mpiuser
 
-# Configurations for running sshd as non-root.
+# Copy SSH configurations from the MPI image.
+COPY --from=mpi /etc/ssh/ssh_config /etc/ssh/ssh_config
+COPY --from=mpi /etc/ssh/sshd_config /etc/ssh/sshd_config
 COPY --from=mpi /home/mpiuser/.sshd_config /home/mpiuser/.sshd_config
-RUN echo "Port ${PORT}" >>/home/mpiuser/.sshd_config
-
-ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/local/mpi/lib:/usr/local/mpi/lib64:${LD_LIBRARY_PATH}
 
 # Install the required Python packages.
 RUN apt install -y python3-dev pip && rm -f /usr/bin/python && ln -s /usr/bin/python3 /usr/bin/python
+
+ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/local/mpi/lib:/usr/local/mpi/lib64:${LD_LIBRARY_PATH}
+ENV HOME=/home/mpiuser
+ENV PATH=$HOME/.local/bin:$PATH
+
 COPY cmd/runtimes/deepspeed/requirements.txt .
-RUN pip install -r requirements.txt
+RUN pip install --user -r requirements.txt
+
+# Give mpiuser permission to download packages and HF models.
+# .cache directory is used by ML frameworks to download models.
+RUN chown -R mpiuser:mpiuser /home/mpiuser/.local
+RUN mkdir -p /home/mpiuser/.cache && chown -R mpiuser:mpiuser /home/mpiuser/.cache
